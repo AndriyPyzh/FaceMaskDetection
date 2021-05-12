@@ -1,96 +1,60 @@
-# ---------------------------The import statments-----------------------------------------
-
-import matplotlib.pyplot as plt  # library to plot graphs
-import numpy as np  # Library for linear algebra and some probabiltity (raw data)
-from keras.preprocessing import image  # used for image classification
+import matplotlib.pyplot as plt
+import numpy as np
+from keras.preprocessing import image
 from keras.preprocessing.image import \
-    ImageDataGenerator  # used to expand the training dataset in order to improve the performance and ability of the model to generalize
-from tensorflow.keras.layers import Dense, Flatten, Conv2D, MaxPool2D  # To create the model
-from tensorflow.keras.models import Sequential  # To create the sequential layer
-from tensorflow.keras.optimizers import Adam  # Adam optimizer
-
-# setting the batch size and the epochs
+    ImageDataGenerator
+from tensorflow.keras.layers import Dense, Flatten, Conv2D, MaxPool2D
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.optimizers import Adam
 
 batch_size = 8
-epochs = 10
-
-"""Splitting the images (80% training and 20% 
-validation) and Data augmanting it
-"""
+epochs = 30
 
 directory = 'data'
 
-train_datagen = ImageDataGenerator(validation_split=0.2,  # Splits the data into training (80%) and validation (20%)
+train_datagen = ImageDataGenerator(validation_split=0.2,
                                    rescale=1. / 255,
-                                   # Multiple the colors by a number between 0-1 to process data faster
-                                   rotation_range=40,  # rotate the images
+                                   rotation_range=40,
                                    width_shift_range=0.2,
                                    height_shift_range=0.2,
                                    zoom_range=0.2,
                                    horizontal_flip=True,
-                                   fill_mode='nearest')  # add new pixels when the image is rotated or shifted
+                                   fill_mode='nearest')
 
 train_generator = train_datagen.flow_from_directory(
     directory,
     target_size=(70, 70),
     batch_size=batch_size,
-    color_mode="rgb",  # for coloured images
+    color_mode="rgb",
     class_mode='binary',
-    seed=2020,  # to make the result reproducible
-    subset='training')  # Specify this is training set
+    seed=2020,
+    subset='training')
 
 validation_generator = train_datagen.flow_from_directory(
     directory,
     target_size=(70, 70),
     batch_size=batch_size,
-    color_mode="rgb",  # for coloured images
+    color_mode="rgb",
     class_mode='binary',
-    subset='validation')  # Specify this is training set
+    subset='validation')
 
-"""**Display a batch of the images used in the training and thier labels**"""
-
-# generate a batch of images and labels from the training set
 imgs, labels = next(train_generator)
 
 
-# plotting function
-
 def plotImages(images_arr):
-    fig, axes = plt.subplots(1, batch_size, figsize=(20, 20))
-    axes = axes.flatten()
-    for img, ax in zip(images_arr, axes):
-        ax.imshow(img)
-        ax.axis('off')
-    plt.tight_layout()
+    plt.figure(figsize=(12, 12))
+    i = 0
+    for img in images_arr:
+        ax = plt.subplot(3, 3, i + 1)
+        plt.imshow(img)
+        plt.title("with mask" if labels[i] == 0 else "without mask", fontsize=30)
+        plt.axis("off")
+        i += 1
     plt.show()
 
 
-# displaying the images and thier labels where as 0 with mask and 1 without mask
 plotImages(imgs)
 print(labels)
-
-"""###**2. Build and train the CNN**
-
-Sequencial is a list of the layers of the model we want to create. Here it consists of
-
-*   Conv2D Layer
-> * **The filter** parameter means the number of this layer's output filters 
-> *   **The kernal_size** parameter is commonly used 3*3
-> *   **The activation** parameter refers to the type of activation function
-> *   **The padding** parameter is enabled to zero-padding
-> *   **The input_shape** parameter has pixel high and pixel wide and have the 3 color channels: RGB
-
-*   MaxPool2D Layer
-> To pool and reduce the dimensionlaity of the data
-*   Flatten Layer
-> * flatten is used to flatten the input to a 1D vector then passed to dense
-
-*   Dense Layer (The output layer)
-> * **The units** parameter means that it has 2 nodes one for with and one for without because we want a binary output 
-> *   **The activation** parameter we use the softmax activation function on our output so that the output for each sample is a probability distribution over the outputs of with and without mask
-"""
-
-# create the model layers
 
 model = Sequential([
     Conv2D(filters=32, kernel_size=(3, 3), activation='relu', padding='same', input_shape=(70, 70, 3)),
@@ -101,28 +65,15 @@ model = Sequential([
     MaxPool2D(pool_size=(2, 2), strides=2),
     Flatten(),
     Dense(units=64, activation='relu'),
-    # means the output is 0,1 (the labels) and the P(c=0) +P(c=1) = 1
     Dense(units=1, activation='sigmoid'),
-
 ])
 
-# check out the model summary
 model.summary()
-
-"""Compile the model using the **Adam** optimizer with **learning rate** of `0.0001`, a **loss** of `binary_crossentropy`, and we'll look at `accuracy` as our performance **metric**."""
 
 model.compile(optimizer=Adam(learning_rate=0.0001), loss='binary_crossentropy', metrics=['accuracy'])
 
-"""We use the `train_generator` because we are now only training the data. The 
-validation data is the `validation_generator`
-"""
-
-# Training the model
 history = model.fit(train_generator, epochs=epochs, validation_data=validation_generator)
 
-"""### **3. Plotting the loss and accuracy of training vs validation**"""
-
-# Plotting the loss of validation and training
 loss_train = history.history['loss']
 loss_val = history.history['val_loss']
 epochstoplot = range(1, epochs + 1)
@@ -134,7 +85,6 @@ plt.ylabel('Loss')
 plt.legend()
 plt.show()
 
-# Plotting the accuracy of validation and training
 accur_train = history.history['accuracy']
 accur_val = history.history['val_accuracy']
 plt.plot(epochstoplot, accur_train, 'g', label='Training accuracy')
@@ -145,11 +95,10 @@ plt.ylabel('Accuracy')
 plt.legend()
 plt.show()
 
-"""### **4. Testing the CNN model**"""
-
 from tkinter import Label, Tk, Button
 from PIL import Image, ImageTk
 import tkinter.filedialog
+
 
 def choose():
     path = tkinter.filedialog.askopenfilename(filetypes=[("Image File", '.jpg')])
